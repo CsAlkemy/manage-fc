@@ -28,7 +28,12 @@ export default function Employees() {
   const handleAddEmployee = (data: EmployeeFormData) => {
     const newEmployee: Employee = {
       id: Date.now().toString(),
-      ...data,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      position: data.position,
+      department: data.department,
+      joinDate: data.joinDate,
       isActive: true,
     };
     setEmployees([...employees, newEmployee]);
