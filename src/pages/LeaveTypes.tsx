@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { LeaveType } from "@/types";
 import { LeaveTypeFormData } from "@/schemas";
-import { Settings, Plus } from "lucide-react";
+import { Settings, Plus, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { useLeaveTypes } from "@/hooks/useLeaveTypes";
 import { LeaveTypeForm } from "@/components/forms/LeaveTypeForm";
 import { supabase } from '@/integrations/supabase/client';
@@ -98,6 +100,56 @@ export default function LeaveTypes() {
     setSelectedLeaveType(undefined);
   };
 
+  const deleteLeaveType = async (leaveTypeId: string, leaveTypeName: string) => {
+    try {
+      const { error } = await supabase
+        .from('leave_types')
+        .delete()
+        .eq('id', leaveTypeId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Leave Type Deleted",
+        description: `${leaveTypeName} has been successfully deleted.`,
+      });
+
+      refetch();
+    } catch (error: any) {
+      console.error('Error deleting leave type:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete leave type. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleLeaveTypeStatus = async (leaveType: LeaveType) => {
+    try {
+      const { error } = await supabase
+        .from('leave_types')
+        .update({ is_active: !leaveType.isActive })
+        .eq('id', leaveType.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Leave Type Updated",
+        description: `${leaveType.name} has been ${!leaveType.isActive ? 'activated' : 'deactivated'}.`,
+      });
+
+      refetch();
+    } catch (error: any) {
+      console.error('Error updating leave type status:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update leave type status. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -174,18 +226,65 @@ export default function LeaveTypes() {
                 </div>
               </div>
               
-              <div className="mt-4 flex space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => handleEditClick(leaveType)}
-                >
-                  Edit
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1">
-                  Settings
-                </Button>
+              <div className="mt-4 flex justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="ml-2">Actions</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleEditClick(leaveType)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => toggleLeaveTypeStatus(leaveType)}>
+                      {leaveType.isActive ? (
+                        <>
+                          <ToggleLeft className="h-4 w-4 mr-2" />
+                          Deactivate
+                        </>
+                      ) : (
+                        <>
+                          <ToggleRight className="h-4 w-4 mr-2" />
+                          Activate
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem 
+                          className="text-red-600 focus:text-red-600"
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Leave Type</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{leaveType.name}"? This action cannot be undone.
+                            All existing leave applications using this type will be affected.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteLeaveType(leaveType.id, leaveType.name)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </CardContent>
           </Card>

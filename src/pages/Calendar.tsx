@@ -17,8 +17,9 @@ export default function CalendarPage() {
 
   // Convert leave applications to calendar events
   const calendarEvents = useMemo(() => {
-    return leaveApplications
+    const events = leaveApplications
       .filter(app => app.status === 'approved') // Only show approved leaves
+      .filter(app => app.employee && app.leaveType) // Ensure required data exists
       .map(app => ({
         id: app.id,
         title: `${app.employee?.firstName} ${app.employee?.lastName} - ${app.leaveType?.name}`,
@@ -28,15 +29,35 @@ export default function CalendarPage() {
         leaveType: app.leaveType!,
         status: app.status,
       }));
+    
+    console.log('Calendar events:', events); // Debug log
+    return events;
   }, [leaveApplications]);
 
   // Get events for a specific date
   const getEventsForDate = (date: Date) => {
-    return calendarEvents.filter(event => {
-      const eventStart = new Date(event.start);
-      const eventEnd = new Date(event.end);
-      return date >= eventStart && date <= eventEnd;
+    const eventsForDate = calendarEvents.filter(event => {
+      // Normalize dates to remove time component for accurate comparison
+      const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const eventStart = new Date(event.start.getFullYear(), event.start.getMonth(), event.start.getDate());
+      const eventEnd = new Date(event.end.getFullYear(), event.end.getMonth(), event.end.getDate());
+      
+      const isInRange = checkDate >= eventStart && checkDate <= eventEnd;
+      
+      // Debug log for specific dates
+      if (date.getDate() === new Date().getDate() && date.getMonth() === new Date().getMonth()) {
+        console.log(`Checking date ${checkDate.toDateString()}:`, {
+          event: event.title,
+          eventStart: eventStart.toDateString(),
+          eventEnd: eventEnd.toDateString(),
+          isInRange
+        });
+      }
+      
+      return isInRange;
     });
+    
+    return eventsForDate;
   };
 
   // Generate calendar days
@@ -95,16 +116,7 @@ export default function CalendarPage() {
           <p className="text-gray-600 mt-1">View team leave schedules and plan ahead.</p>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button variant="outline" size="sm">
-            <Users className="h-4 w-4 mr-2" />
-            Team View
-          </Button>
-        </div>
+       
       </div>
 
       <Card>

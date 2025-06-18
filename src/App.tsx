@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
 import LeaveTypes from "./pages/LeaveTypes";
 import LeaveApplications from "./pages/LeaveApplications";
+import EmployeeLeaveStatus from "./pages/EmployeeLeaveStatus";
 import CalendarPage from "./pages/Calendar";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -59,6 +60,13 @@ function AppRoutes() {
         <ProtectedRoute requireAdmin={true}>
           <Layout>
             <LeaveApplications />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/employee-leave-status" element={
+        <ProtectedRoute requireAdmin={true}>
+          <Layout>
+            <EmployeeLeaveStatus />
           </Layout>
         </ProtectedRoute>
       } />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,17 +6,29 @@ import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckCircle, XCircle, Clock, FileText, Calendar, Eye } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CheckCircle, XCircle, Clock, FileText, Calendar, Eye, Filter, X } from "lucide-react";
 import { useLeaveApplications } from "@/hooks/useLeaveApplications";
 import { useAuth } from "@/contexts/AuthContext";
 import { LeaveApplication } from "@/types";
-import { format } from "date-fns";
+import { format, isWithinInterval, parseISO } from "date-fns";
 
 export default function LeaveApplications() {
   const { leaveApplications, isLoading, approveApplication, rejectApplication } = useLeaveApplications();
   const { user } = useAuth();
   const [selectedApplication, setSelectedApplication] = useState<LeaveApplication | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    status: "all",
+    leaveType: "all",
+    employee: "",
+    startDate: "",
+    endDate: ""
+  });
+  const [showFilters, setShowFilters] = useState(false);
 
   const handleApprove = async (applicationId: string) => {
     await approveApplication(applicationId);
@@ -44,6 +56,102 @@ export default function LeaveApplications() {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
+  // Get unique values for filter dropdowns
+  const uniqueLeaveTypes = useMemo(() => {
+    const types = leaveApplications
+      .map(app => app.leaveType)
+      .filter((type, index, self) => type && self.findIndex(t => t?.id === type.id) === index);
+    return types;
+  }, [leaveApplications]);
+
+  const uniqueEmployees = useMemo(() => {
+    const employees = leaveApplications
+      .map(app => app.employee)
+      .filter((emp, index, self) => emp && self.findIndex(e => e?.id === emp.id) === index);
+    return employees;
+  }, [leaveApplications]);
+
+  // Filter applications based on current filters
+  const filteredApplications = useMemo(() => {
+    return leaveApplications.filter(application => {
+      // Status filter
+      if (filters.status !== "all" && application.status !== filters.status) {
+        return false;
+      }
+
+      // Leave type filter
+      if (filters.leaveType !== "all" && application.leaveType?.id !== filters.leaveType) {
+        return false;
+      }
+
+      // Employee filter (search by name)
+      if (filters.employee && application.employee) {
+        const fullName = `${application.employee.firstName} ${application.employee.lastName}`.toLowerCase();
+        if (!fullName.includes(filters.employee.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // Date range filter
+      if (filters.startDate || filters.endDate) {
+        try {
+          const appStart = new Date(application.startDate);
+          const appEnd = new Date(application.endDate);
+          
+          // If only start date is provided, filter applications that start on or after this date
+          if (filters.startDate && !filters.endDate) {
+            const filterStart = new Date(filters.startDate);
+            if (appStart < filterStart) {
+              return false;
+            }
+          }
+          
+          // If only end date is provided, filter applications that end on or before this date
+          if (!filters.startDate && filters.endDate) {
+            const filterEnd = new Date(filters.endDate);
+            if (appEnd > filterEnd) {
+              return false;
+            }
+          }
+          
+          // If both dates are provided, check if application dates overlap with filter range
+          if (filters.startDate && filters.endDate) {
+            const filterStart = new Date(filters.startDate);
+            const filterEnd = new Date(filters.endDate);
+            
+            // Application must overlap with the filter date range
+            // No overlap if: app ends before filter starts OR app starts after filter ends
+            const noOverlap = appEnd < filterStart || appStart > filterEnd;
+            if (noOverlap) {
+              return false;
+            }
+          }
+        } catch (error) {
+          console.error('Date filtering error:', error);
+          // Invalid date format, skip date filtering
+        }
+      }
+
+      return true;
+    });
+  }, [leaveApplications, filters]);
+
+  const clearFilters = () => {
+    setFilters({
+      status: "all",
+      leaveType: "all",
+      employee: "",
+      startDate: "",
+      endDate: ""
+    });
+  };
+
+  const hasActiveFilters = filters.status !== "all" || 
+                          filters.leaveType !== "all" || 
+                          filters.employee !== "" || 
+                          filters.startDate !== "" || 
+                          filters.endDate !== "";
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -64,8 +172,137 @@ export default function LeaveApplications() {
         <p className="text-gray-600 mt-1">Manage and review employee leave requests.</p>
       </div>
 
+      {/* Filter Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              <span className="font-medium">Filters</span>
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="ml-2">
+                  {filteredApplications.length} of {leaveApplications.length}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="h-4 w-4 mr-1" />
+                  Clear
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                {showFilters ? "Hide" : "Show"} Filters
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        
+        {showFilters && (
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* Status Filter */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Status</label>
+                <Select
+                  value={filters.status}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Leave Type Filter */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Leave Type</label>
+                <Select
+                  value={filters.leaveType}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, leaveType: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {uniqueLeaveTypes.map((type) => (
+                      <SelectItem key={type?.id} value={type?.id || ""}>
+                        <div className="flex items-center">
+                          <div 
+                            className="w-3 h-3 rounded-full mr-2"
+                            style={{ backgroundColor: type?.color || '#3B82F6' }}
+                          />
+                          {type?.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Employee Filter */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Employee</label>
+                <Input
+                  placeholder="Search employee..."
+                  value={filters.employee}
+                  onChange={(e) => setFilters(prev => ({ ...prev, employee: e.target.value }))}
+                />
+              </div>
+
+              {/* Start Date Filter */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">From Date</label>
+                <Input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                />
+              </div>
+
+              {/* End Date Filter */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">To Date</label>
+                <Input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                />
+              </div>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Results Summary */}
+      {hasActiveFilters && (
+        <div className="flex items-center justify-between bg-blue-50 p-4 rounded-lg">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium text-blue-900">
+              Showing {filteredApplications.length} of {leaveApplications.length} applications
+            </span>
+          </div>
+          {filteredApplications.length === 0 && (
+            <span className="text-sm text-blue-700">Try adjusting your filters</span>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-6">
-        {leaveApplications.map((application) => (
+        {filteredApplications.map((application) => (
           <Card key={application.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -262,13 +499,23 @@ export default function LeaveApplications() {
         ))}
       </div>
 
-      {leaveApplications.length === 0 && (
+      {filteredApplications.length === 0 && (
         <div className="text-center py-12">
           <FileText className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No leave applications</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            {hasActiveFilters ? "No applications match your filters" : "No leave applications"}
+          </h3>
           <p className="mt-1 text-sm text-gray-500">
-            No leave applications have been submitted yet.
+            {hasActiveFilters 
+              ? "Try adjusting your filter criteria to see more results." 
+              : "No leave applications have been submitted yet."
+            }
           </p>
+          {hasActiveFilters && (
+            <Button variant="outline" onClick={clearFilters} className="mt-4">
+              Clear all filters
+            </Button>
+          )}
         </div>
       )}
     </div>
