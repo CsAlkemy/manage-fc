@@ -3,12 +3,22 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { mockLeaveTypes } from "@/data/mockData";
 import { LeaveType } from "@/types";
 import { Settings, Plus } from "lucide-react";
+import { useLeaveTypes } from "@/hooks/useLeaveTypes";
 
 export default function LeaveTypes() {
-  const [leaveTypes] = useState(mockLeaveTypes);
+  const { leaveTypes, isLoading } = useLeaveTypes();
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Loading leave types...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -74,6 +84,16 @@ export default function LeaveTypes() {
           </Card>
         ))}
       </div>
+
+      {leaveTypes.length === 0 && (
+        <div className="text-center py-12">
+          <Settings className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No leave types found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Get started by adding your first leave type configuration.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

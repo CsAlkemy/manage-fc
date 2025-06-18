@@ -5,14 +5,13 @@ import { Input } from "@/components/ui/input";
 import { EmployeeCard } from "@/components/employees/EmployeeCard";
 import { EmployeeForm } from "@/components/forms/EmployeeForm";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { mockEmployees } from "@/data/mockData";
 import { Employee } from "@/types";
 import { EmployeeFormData } from "@/schemas";
 import { Users, User } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { useEmployees } from "@/hooks/useEmployees";
 
 export default function Employees() {
-  const [employees, setEmployees] = useState(mockEmployees);
+  const { employees, isLoading, addEmployee, updateEmployee } = useEmployees();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -25,9 +24,8 @@ export default function Employees() {
       employee.department.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddEmployee = (data: EmployeeFormData) => {
-    const newEmployee: Employee = {
-      id: Date.now().toString(),
+  const handleAddEmployee = async (data: EmployeeFormData) => {
+    await addEmployee({
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
@@ -35,30 +33,24 @@ export default function Employees() {
       department: data.department,
       joinDate: data.joinDate,
       isActive: true,
-    };
-    setEmployees([...employees, newEmployee]);
-    setIsDialogOpen(false);
-    toast({
-      title: "Employee Added",
-      description: `${data.firstName} ${data.lastName} has been successfully added.`,
     });
+    setIsDialogOpen(false);
   };
 
-  const handleEditEmployee = (data: EmployeeFormData) => {
+  const handleEditEmployee = async (data: EmployeeFormData) => {
     if (!selectedEmployee) return;
     
-    const updatedEmployees = employees.map((emp) =>
-      emp.id === selectedEmployee.id
-        ? { ...emp, ...data }
-        : emp
-    );
-    setEmployees(updatedEmployees);
+    await updateEmployee(selectedEmployee.id, {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      position: data.position,
+      department: data.department,
+      joinDate: data.joinDate,
+      isActive: selectedEmployee.isActive,
+    });
     setSelectedEmployee(undefined);
     setIsDialogOpen(false);
-    toast({
-      title: "Employee Updated",
-      description: `${data.firstName} ${data.lastName}'s profile has been updated.`,
-    });
   };
 
   const handleEditClick = (employee: Employee) => {
@@ -70,6 +62,16 @@ export default function Employees() {
     setIsDialogOpen(false);
     setSelectedEmployee(undefined);
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Loading employees...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

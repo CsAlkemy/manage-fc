@@ -9,7 +9,205 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      employees: {
+        Row: {
+          created_at: string
+          department: string
+          email: string
+          first_name: string
+          id: string
+          is_active: boolean
+          join_date: string
+          last_name: string
+          position: string
+          profile_photo: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department: string
+          email: string
+          first_name: string
+          id?: string
+          is_active?: boolean
+          join_date?: string
+          last_name: string
+          position: string
+          profile_photo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string
+          email?: string
+          first_name?: string
+          id?: string
+          is_active?: boolean
+          join_date?: string
+          last_name?: string
+          position?: string
+          profile_photo?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      leave_applications: {
+        Row: {
+          applied_date: string
+          approved_by: string | null
+          approved_date: string | null
+          created_at: string
+          days: number
+          employee_id: string
+          end_date: string
+          id: string
+          leave_type_id: string
+          reason: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          applied_date?: string
+          approved_by?: string | null
+          approved_date?: string | null
+          created_at?: string
+          days: number
+          employee_id: string
+          end_date: string
+          id?: string
+          leave_type_id: string
+          reason: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          applied_date?: string
+          approved_by?: string | null
+          approved_date?: string | null
+          created_at?: string
+          days?: number
+          employee_id?: string
+          end_date?: string
+          id?: string
+          leave_type_id?: string
+          reason?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_applications_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_applications_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_applications_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_balances: {
+        Row: {
+          allocated: number
+          created_at: string
+          employee_id: string
+          id: string
+          leave_type_id: string
+          remaining: number
+          updated_at: string
+          used: number
+          year: number
+        }
+        Insert: {
+          allocated?: number
+          created_at?: string
+          employee_id: string
+          id?: string
+          leave_type_id: string
+          remaining?: number
+          updated_at?: string
+          used?: number
+          year?: number
+        }
+        Update: {
+          allocated?: number
+          created_at?: string
+          employee_id?: string
+          id?: string
+          leave_type_id?: string
+          remaining?: number
+          updated_at?: string
+          used?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_balances_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_balances_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_types: {
+        Row: {
+          carry_over: boolean
+          color: string
+          created_at: string
+          days_allowed: number
+          description: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          carry_over?: boolean
+          color?: string
+          created_at?: string
+          days_allowed: number
+          description: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          carry_over?: boolean
+          color?: string
+          created_at?: string
+          days_allowed?: number
+          description?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
