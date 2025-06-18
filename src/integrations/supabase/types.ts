@@ -17,8 +17,10 @@ export type Database = {
           first_name: string
           id: string
           is_active: boolean
+          is_admin: boolean
           join_date: string
           last_name: string
+          password: string | null
           position: string
           profile_photo: string | null
           updated_at: string
@@ -30,8 +32,10 @@ export type Database = {
           first_name: string
           id?: string
           is_active?: boolean
+          is_admin?: boolean
           join_date?: string
           last_name: string
+          password?: string | null
           position: string
           profile_photo?: string | null
           updated_at?: string
@@ -43,8 +47,10 @@ export type Database = {
           first_name?: string
           id?: string
           is_active?: boolean
+          is_admin?: boolean
           join_date?: string
           last_name?: string
+          password?: string | null
           position?: string
           profile_photo?: string | null
           updated_at?: string

@@ -1,4 +1,3 @@
-
 export interface Employee {
   id: string;
   firstName: string;
@@ -9,6 +8,8 @@ export interface Employee {
   profilePhoto?: string;
   joinDate: Date;
   isActive: boolean;
+  password?: string;
+  isAdmin?: boolean;
 }
 
 export interface LeaveType {
@@ -24,7 +25,9 @@ export interface LeaveType {
 export interface LeaveApplication {
   id: string;
   employeeId: string;
+  employee?: Employee;
   leaveTypeId: string;
+  leaveType?: LeaveType;
   startDate: Date;
   endDate: Date;
   days: number;
@@ -32,6 +35,7 @@ export interface LeaveApplication {
   status: 'pending' | 'approved' | 'rejected';
   appliedDate: Date;
   approvedBy?: string;
+  approver?: Employee;
   approvedDate?: Date;
 }
 
@@ -50,4 +54,23 @@ export interface DashboardStats {
   pendingApplications: number;
   onLeaveToday: number;
   totalLeaveTypes: number;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  isAdmin: boolean;
+  profilePhoto?: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  employee: Employee;
+  leaveType: LeaveType;
+  status: 'pending' | 'approved' | 'rejected';
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Employee } from '@/types';
@@ -26,7 +25,9 @@ export function useEmployees() {
         department: emp.department,
         profilePhoto: emp.profile_photo,
         joinDate: new Date(emp.join_date),
-        isActive: emp.is_active
+        isActive: emp.is_active,
+        password: emp.password,
+        isAdmin: emp.is_admin || false,
       }));
 
       setEmployees(formattedEmployees);
@@ -44,21 +45,44 @@ export function useEmployees() {
 
   const addEmployee = async (employeeData: Omit<Employee, 'id'>) => {
     try {
+      console.log('🔍 useEmployees addEmployee - Employee data received:', {
+        ...employeeData,
+        profilePhoto: employeeData.profilePhoto ? `${employeeData.profilePhoto.substring(0, 50)}... (${employeeData.profilePhoto.length} chars)` : 'null/undefined'
+      });
+
+      const insertData = {
+        first_name: employeeData.firstName,
+        last_name: employeeData.lastName,
+        email: employeeData.email,
+        position: employeeData.position,
+        department: employeeData.department,
+        join_date: employeeData.joinDate.toISOString().split('T')[0],
+        is_active: employeeData.isActive,
+        profile_photo: employeeData.profilePhoto,
+        password: employeeData.password,
+        is_admin: employeeData.isAdmin || false,
+      };
+
+      console.log('🔍 useEmployees addEmployee - Insert data:', {
+        ...insertData,
+        profile_photo: insertData.profile_photo ? `${insertData.profile_photo.substring(0, 50)}... (${insertData.profile_photo.length} chars)` : 'null/undefined'
+      });
+
       const { data, error } = await supabase
         .from('employees')
-        .insert({
-          first_name: employeeData.firstName,
-          last_name: employeeData.lastName,
-          email: employeeData.email,
-          position: employeeData.position,
-          department: employeeData.department,
-          join_date: employeeData.joinDate.toISOString().split('T')[0],
-          is_active: employeeData.isActive
-        })
+        .insert(insertData)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('🚨 Database insertion error:', error);
+        throw error;
+      }
+
+      console.log('✅ Database response:', {
+        ...data,
+        profile_photo: data.profile_photo ? `${data.profile_photo.substring(0, 50)}... (${data.profile_photo.length} chars)` : 'null/undefined'
+      });
 
       const newEmployee: Employee = {
         id: data.id,
@@ -69,7 +93,9 @@ export function useEmployees() {
         department: data.department,
         profilePhoto: data.profile_photo,
         joinDate: new Date(data.join_date),
-        isActive: data.is_active
+        isActive: data.is_active,
+        password: data.password,
+        isAdmin: data.is_admin || false,
       };
 
       setEmployees(prev => [newEmployee, ...prev]);
@@ -84,6 +110,8 @@ export function useEmployees() {
         description: error.message || "Failed to add employee. Please try again.",
         variant: "destructive"
       });
+      // Re-throw the error so the dialog can handle it
+      throw error;
     }
   };
 
@@ -98,7 +126,10 @@ export function useEmployees() {
           position: employeeData.position,
           department: employeeData.department,
           join_date: employeeData.joinDate.toISOString().split('T')[0],
-          is_active: employeeData.isActive
+          is_active: employeeData.isActive,
+          profile_photo: employeeData.profilePhoto,
+          password: employeeData.password,
+          is_admin: employeeData.isAdmin || false,
         })
         .eq('id', id)
         .select()
@@ -115,7 +146,9 @@ export function useEmployees() {
         department: data.department,
         profilePhoto: data.profile_photo,
         joinDate: new Date(data.join_date),
-        isActive: data.is_active
+        isActive: data.is_active,
+        password: data.password,
+        isAdmin: data.is_admin || false,
       };
 
       setEmployees(prev => prev.map(emp => emp.id === id ? updatedEmployee : emp));
@@ -130,6 +163,34 @@ export function useEmployees() {
         description: error.message || "Failed to update employee. Please try again.",
         variant: "destructive"
       });
+      // Re-throw the error so the dialog can handle it
+      throw error;
+    }
+  };
+
+  const deleteEmployee = async (id: string) => {
+    try {
+      const employeeToDelete = employees.find(emp => emp.id === id);
+      
+      const { error } = await supabase
+        .from('employees')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setEmployees(prev => prev.filter(emp => emp.id !== id));
+      toast({
+        title: "Employee Deleted",
+        description: `${employeeToDelete?.firstName} ${employeeToDelete?.lastName} has been removed.`,
+      });
+    } catch (error: any) {
+      console.error('Error deleting employee:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete employee. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -142,6 +203,7 @@ export function useEmployees() {
     isLoading,
     addEmployee,
     updateEmployee,
+    deleteEmployee,
     refetch: fetchEmployees
   };
 }

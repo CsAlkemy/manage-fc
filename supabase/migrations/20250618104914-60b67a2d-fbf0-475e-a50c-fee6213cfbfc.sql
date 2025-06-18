@@ -1,4 +1,3 @@
-
 -- Create employees table
 CREATE TABLE public.employees (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -8,6 +7,8 @@ CREATE TABLE public.employees (
   position TEXT NOT NULL,
   department TEXT NOT NULL,
   profile_photo TEXT,
+  password TEXT,
+  is_admin BOOLEAN NOT NULL DEFAULT false,
   join_date DATE NOT NULL DEFAULT CURRENT_DATE,
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
@@ -77,6 +78,10 @@ INSERT INTO public.leave_types (name, description, days_allowed, carry_over, col
   ('Personal Leave', 'Personal time off for family matters or personal needs', 5, false, '#8B5CF6'),
   ('Maternity Leave', 'Leave for new mothers', 90, false, '#F59E0B'),
   ('Paternity Leave', 'Leave for new fathers', 14, false, '#06B6D4');
+
+-- Insert a default admin user
+INSERT INTO public.employees (first_name, last_name, email, position, department, password, is_admin) VALUES
+  ('Admin', 'User', 'admin@company.com', 'System Administrator', 'IT', 'admin123', true);
 
 -- Create function to automatically calculate remaining leave balance
 CREATE OR REPLACE FUNCTION calculate_remaining_balance()

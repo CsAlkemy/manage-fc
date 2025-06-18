@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 
 export const employeeSchema = z.object({
@@ -10,6 +9,12 @@ export const employeeSchema = z.object({
   joinDate: z.date({
     required_error: "Join date is required",
   }),
+  profilePhoto: z.string().optional(),
+  password: z.string().refine(
+    (val) => !val || val.length >= 6,
+    { message: "Password must be at least 6 characters" }
+  ).optional(),
+  isAdmin: z.boolean().default(false),
 });
 
 export const leaveTypeSchema = z.object({
@@ -34,6 +39,27 @@ export const leaveApplicationSchema = z.object({
   path: ["endDate"],
 });
 
+export const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(6, "Password confirmation is required"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 export type EmployeeFormData = z.infer<typeof employeeSchema>;
 export type LeaveTypeFormData = z.infer<typeof leaveTypeSchema>;
 export type LeaveApplicationFormData = z.infer<typeof leaveApplicationSchema>;
+export type LoginFormData = z.infer<typeof loginSchema>;
+export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
