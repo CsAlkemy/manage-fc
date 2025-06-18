@@ -1,12 +1,23 @@
 
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockDashboardStats, mockEmployees } from "@/data/mockData";
 import { Users, Clock, Calendar, Settings } from "lucide-react";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useRecentEmployees } from "@/hooks/useRecentEmployees";
 
 export default function Dashboard() {
-  const stats = mockDashboardStats;
-  const recentEmployees = mockEmployees.slice(0, 3);
+  const { stats, isLoading: statsLoading } = useDashboardStats();
+  const { recentEmployees, isLoading: employeesLoading } = useRecentEmployees();
+
+  if (statsLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Loading dashboard...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -51,26 +62,32 @@ export default function Dashboard() {
             <CardTitle>Recent Employees</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentEmployees.map((employee) => (
-                <div key={employee.id} className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-blue-600">
-                      {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
-                    </span>
+            {employeesLoading ? (
+              <div className="text-center text-gray-500">Loading...</div>
+            ) : recentEmployees.length > 0 ? (
+              <div className="space-y-4">
+                {recentEmployees.map((employee) => (
+                  <div key={employee.id} className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-blue-600">
+                        {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {employee.firstName} {employee.lastName}
+                      </p>
+                      <p className="text-xs text-gray-500">{employee.position}</p>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {new Date(employee.joinDate).toLocaleDateString()}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      {employee.firstName} {employee.lastName}
-                    </p>
-                    <p className="text-xs text-gray-500">{employee.position}</p>
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    {new Date(employee.joinDate).toLocaleDateString()}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-500">No employees found</div>
+            )}
           </CardContent>
         </Card>
 

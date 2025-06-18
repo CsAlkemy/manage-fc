@@ -3,12 +3,100 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { LeaveType } from "@/types";
+import { LeaveTypeFormData } from "@/schemas";
 import { Settings, Plus } from "lucide-react";
 import { useLeaveTypes } from "@/hooks/useLeaveTypes";
+import { LeaveTypeForm } from "@/components/forms/LeaveTypeForm";
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 export default function LeaveTypes() {
-  const { leaveTypes, isLoading } = useLeaveTypes();
+  const { leaveTypes, isLoading, refetch } = useLeaveTypes();
+  const [selectedLeaveType, setSelectedLeaveType] = useState<LeaveType | undefined>();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const addLeaveType = async (leaveTypeData: LeaveTypeFormData) => {
+    try {
+      const { data, error } = await supabase
+        .from('leave_types')
+        .insert({
+          name: leaveTypeData.name,
+          description: leaveTypeData.description,
+          days_allowed: leaveTypeData.daysAllowed,
+          carry_over: leaveTypeData.carryOver,
+          color: leaveTypeData.color,
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Leave Type Added",
+        description: `${leaveTypeData.name} has been successfully created.`,
+      });
+      
+      refetch();
+      setIsDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error adding leave type:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add leave type. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateLeaveType = async (leaveTypeData: LeaveTypeFormData) => {
+    if (!selectedLeaveType) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('leave_types')
+        .update({
+          name: leaveTypeData.name,
+          description: leaveTypeData.description,
+          days_allowed: leaveTypeData.daysAllowed,
+          carry_over: leaveTypeData.carryOver,
+          color: leaveTypeData.color
+        })
+        .eq('id', selectedLeaveType.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Leave Type Updated",
+        description: `${leaveTypeData.name} has been successfully updated.`,
+      });
+
+      refetch();
+      setSelectedLeaveType(undefined);
+      setIsDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error updating leave type:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update leave type. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditClick = (leaveType: LeaveType) => {
+    setSelectedLeaveType(leaveType);
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+    setSelectedLeaveType(undefined);
+  };
 
   if (isLoading) {
     return (
@@ -30,10 +118,24 @@ export default function LeaveTypes() {
           </h1>
           <p className="text-gray-600 mt-1">Configure and manage different types of leave policies.</p>
         </div>
-        <Button className="mt-4 sm:mt-0">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Leave Type
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="mt-4 sm:mt-0">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Leave Type
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogTitle className="sr-only">
+              {selectedLeaveType ? "Edit Leave Type" : "Add New Leave Type"}
+            </DialogTitle>
+            <LeaveTypeForm
+              leaveType={selectedLeaveType}
+              onSubmit={selectedLeaveType ? updateLeaveType : addLeaveType}
+              onCancel={handleDialogClose}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -73,7 +175,12 @@ export default function LeaveTypes() {
               </div>
               
               <div className="mt-4 flex space-x-2">
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => handleEditClick(leaveType)}
+                >
                   Edit
                 </Button>
                 <Button variant="outline" size="sm" className="flex-1">

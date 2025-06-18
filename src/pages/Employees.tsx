@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmployeeCard } from "@/components/employees/EmployeeCard";
 import { EmployeeForm } from "@/components/forms/EmployeeForm";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { Employee } from "@/types";
 import { EmployeeFormData } from "@/schemas";
 import { Users, User } from "lucide-react";
@@ -91,6 +91,9 @@ export default function Employees() {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogTitle className="sr-only">
+              {selectedEmployee ? "Edit Employee" : "Add New Employee"}
+            </DialogTitle>
             <EmployeeForm
               employee={selectedEmployee}
               onSubmit={selectedEmployee ? handleEditEmployee : handleAddEmployee}
