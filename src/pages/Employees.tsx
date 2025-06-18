@@ -16,6 +16,7 @@ import { Employee } from "@/types";
 import { EmployeeFormData } from "@/schemas";
 import { Users, User } from "lucide-react";
 import { useEmployees } from "@/hooks/useEmployees";
+import { EmployeeCardSkeleton } from "@/components/ui/skeleton";
 
 export default function Employees() {
   const { employees, isLoading, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
@@ -125,15 +126,7 @@ export default function Employees() {
     setEmployeeToDelete(undefined);
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading employees...</div>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6">
@@ -173,14 +166,25 @@ export default function Employees() {
 
       {/* Employee Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredEmployees.map((employee) => (
-          <EmployeeCard
-            key={employee.id}
-            employee={employee}
-            onEdit={handleEditClick}
-            onDelete={handleDeleteClick}
-          />
-        ))}
+        {isLoading ? (
+          <>
+            <EmployeeCardSkeleton />
+            <EmployeeCardSkeleton />
+            <EmployeeCardSkeleton />
+            <EmployeeCardSkeleton />
+            <EmployeeCardSkeleton />
+            <EmployeeCardSkeleton />
+          </>
+        ) : (
+          filteredEmployees.map((employee) => (
+            <EmployeeCard
+              key={employee.id}
+              employee={employee}
+              onEdit={handleEditClick}
+              onDelete={handleDeleteClick}
+            />
+          ))
+        )}
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -196,7 +200,7 @@ export default function Employees() {
         variant="destructive"
       />
 
-      {filteredEmployees.length === 0 && (
+      {!isLoading && filteredEmployees.length === 0 && (
         <div className="text-center py-12">
           <Users className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No employees found</h3>

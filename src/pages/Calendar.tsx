@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CalendarSkeleton } from "@/components/ui/skeleton";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Users, Filter } from "lucide-react";
 import { useLeaveApplications } from "@/hooks/useLeaveApplications";
 import { CalendarEvent } from "@/types";
@@ -98,9 +99,16 @@ export default function CalendarPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading calendar...</div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+              <CalendarIcon className="mr-3 h-8 w-8 text-blue-600" />
+              Leave Calendar
+            </h1>
+            <p className="text-gray-600 mt-1">View team leave schedules and plan ahead.</p>
+          </div>
         </div>
+        <CalendarSkeleton />
       </div>
     );
   }

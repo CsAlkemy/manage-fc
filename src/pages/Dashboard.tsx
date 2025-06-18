@@ -3,7 +3,9 @@ import { LeaveBalanceCard } from "@/components/dashboard/LeaveBalanceCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
-import { Users, Clock, Calendar, Settings } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StatsCardSkeleton, LeaveBalanceCardSkeleton, RecentEmployeesSkeleton } from "@/components/ui/skeleton";
+import { Users, Clock, Calendar, Settings, CalendarDays } from "lucide-react";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useRecentEmployees } from "@/hooks/useRecentEmployees";
 import { useEmployeeLeaveBalance } from "@/hooks/useEmployeeLeaveBalance";
@@ -11,7 +13,7 @@ import { EmployeeForm } from "@/components/forms/EmployeeForm";
 import { LeaveApplicationForm } from "@/components/forms/LeaveApplicationForm";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useLeaveApplications } from "@/hooks/useLeaveApplications";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { EmployeeFormData, LeaveApplicationFormData } from "@/schemas";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -21,12 +23,60 @@ export default function Dashboard() {
   const { stats, isLoading: statsLoading } = useDashboardStats();
   const { recentEmployees, isLoading: employeesLoading } = useRecentEmployees();
   const { leaveBalances, isLoading: leaveBalancesLoading } = useEmployeeLeaveBalance(user?.id);
-  const { addEmployee } = useEmployees();
-  const { addLeaveApplication } = useLeaveApplications();
+  const { employees, isLoading: allEmployeesLoading, addEmployee } = useEmployees();
+  const { leaveApplications, isLoading: leaveApplicationsLoading, addLeaveApplication } = useLeaveApplications();
   const navigate = useNavigate();
 
   const [isEmployeeDialogOpen, setIsEmployeeDialogOpen] = useState(false);
   const [isLeaveApplicationDialogOpen, setIsLeaveApplicationDialogOpen] = useState(false);
+
+  // Calculate employees on leave this week (for employee view)
+  const employeesOnLeaveThisWeek = useMemo(() => {
+    if (!leaveApplications || !employees) return [];
+
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // End of current week (Saturday)
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    const approvedLeaves = leaveApplications.filter(app => 
+      app.status === 'approved' && 
+      app.employee && 
+      app.leaveType &&
+      app.employee.id !== user?.id // Exclude current user
+    );
+
+    const employeesOnLeave = approvedLeaves
+      .filter(app => {
+        const leaveStart = new Date(app.startDate);
+        const leaveEnd = new Date(app.endDate);
+        
+        // Check if leave overlaps with current week
+        return leaveStart <= endOfWeek && leaveEnd >= startOfWeek;
+      })
+      .map(app => ({
+        id: app.employee!.id,
+        firstName: app.employee!.firstName,
+        lastName: app.employee!.lastName,
+        position: app.employee!.position,
+        department: app.employee!.department,
+        profilePhoto: app.employee!.profilePhoto,
+        leaveType: app.leaveType!.name,
+        leaveColor: app.leaveType!.color,
+        startDate: app.startDate,
+        endDate: app.endDate,
+      }))
+      // Remove duplicates (if someone has multiple leaves this week)
+      .filter((employee, index, self) => 
+        index === self.findIndex(e => e.id === employee.id)
+      );
+
+    return employeesOnLeave;
+  }, [leaveApplications, employees, user?.id]);
 
   const handleAddEmployee = async (data: EmployeeFormData) => {
     console.log('🔍 Dashboard handleAddEmployee - Form data received:', {
@@ -71,15 +121,8 @@ export default function Dashboard() {
     setIsLeaveApplicationDialogOpen(false);
   };
 
-  if (statsLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading dashboard...</div>
-        </div>
-      </div>
-    );
-  }
+  const isAnyLoading = statsLoading || employeesLoading || leaveBalancesLoading;
+  const isEmployeeDataLoading = allEmployeesLoading || leaveApplicationsLoading;
 
   return (
     <div className="space-y-6">
@@ -91,78 +134,148 @@ export default function Dashboard() {
       {/* Stats Grid - Admin Only */}
       {user?.isAdmin && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatsCard
-            title="Total Employees"
-            value={stats.totalEmployees}
-            icon={Users}
-            description="Active team members"
-            trend={{ value: 12, isPositive: true }}
-          />
-          <StatsCard
-            title="Pending Applications"
-            value={stats.pendingApplications}
-            icon={Clock}
-            description="Awaiting approval"
-          />
-          <StatsCard
-            title="On Leave Today"
-            value={stats.onLeaveToday}
-            icon={Calendar}
-            description="Currently away"
-          />
-          <StatsCard
-            title="Leave Types"
-            value={stats.totalLeaveTypes}
-            icon={Settings}
-            description="Configured types"
-          />
+          {statsLoading ? (
+            <>
+              <StatsCardSkeleton />
+              <StatsCardSkeleton />
+              <StatsCardSkeleton />
+              <StatsCardSkeleton />
+            </>
+          ) : (
+            <>
+              <StatsCard
+                title="Total Employees"
+                value={stats.totalEmployees}
+                icon={Users}
+                description="Active team members"
+                trend={{ value: 12, isPositive: true }}
+              />
+              <StatsCard
+                title="Pending Applications"
+                value={stats.pendingApplications}
+                icon={Clock}
+                description="Awaiting approval"
+              />
+              <StatsCard
+                title="On Leave Today"
+                value={stats.onLeaveToday}
+                icon={Calendar}
+                description="Currently away"
+              />
+              <StatsCard
+                title="Leave Types"
+                value={stats.totalLeaveTypes}
+                icon={Settings}
+                description="Configured types"
+              />
+            </>
+          )}
         </div>
       )}
 
-      {/* Employee Leave Balances or Recent Activity */}
+      {/* Employee Leave Balances and Team Leave Status */}
       <div className="grid gap-6 lg:grid-cols-2">
         {!user?.isAdmin ? (
-          // Employee View: Show Leave Balances
-          <div className="lg:col-span-2 -mt-16">
-            <div className="mb-4 flex justify-between items-center">
-              <div>
-               
+          <>
+            {/* Employee View: Show Leave Balances */}
+            <div className="lg:col-span-2">
+              <div className="mb-4 flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Your Leave Balances</h2>
+                </div>
+                <Dialog open={isLeaveApplicationDialogOpen} onOpenChange={setIsLeaveApplicationDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Apply for Leave
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogTitle className="sr-only">Apply for Leave</DialogTitle>
+                    <LeaveApplicationForm
+                      onSubmit={handleLeaveApplication}
+                      onCancel={() => setIsLeaveApplicationDialogOpen(false)}
+                    />
+                  </DialogContent>
+                </Dialog>
               </div>
-              <Dialog open={isLeaveApplicationDialogOpen} onOpenChange={setIsLeaveApplicationDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Apply for Leave
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <DialogTitle className="sr-only">Apply for Leave</DialogTitle>
-                  <LeaveApplicationForm
-                    onSubmit={handleLeaveApplication}
-                    onCancel={() => setIsLeaveApplicationDialogOpen(false)}
-                  />
-                </DialogContent>
-              </Dialog>
+              {leaveBalancesLoading ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+                  <LeaveBalanceCardSkeleton />
+                  <LeaveBalanceCardSkeleton />
+                  <LeaveBalanceCardSkeleton />
+                </div>
+              ) : leaveBalances.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+                  {leaveBalances.map((balance) => (
+                    <LeaveBalanceCard
+                      key={balance.leaveTypeId}
+                      leaveTypeName={balance.leaveTypeName}
+                      totalAllowed={balance.totalAllowed}
+                      totalTaken={balance.totalTaken}
+                      totalRemaining={balance.totalRemaining}
+                      color={balance.color}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 py-8 mb-6">No leave types configured</div>
+              )}
+
+              {/* Team Members on Leave This Week */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <CalendarDays className="mr-2 h-5 w-5 text-blue-600" />
+                    Team Members on Leave This Week
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isEmployeeDataLoading ? (
+                    <RecentEmployeesSkeleton />
+                  ) : employeesOnLeaveThisWeek.length > 0 ? (
+                    <div className="space-y-4">
+                      {employeesOnLeaveThisWeek.map((employee) => (
+                        <div key={employee.id} className="flex items-center space-x-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={employee.profilePhoto} />
+                            <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
+                              {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">
+                              {employee.firstName} {employee.lastName}
+                            </p>
+                            <p className="text-xs text-gray-500">{employee.position} • {employee.department}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center space-x-2">
+                              <div 
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: employee.leaveColor }}
+                              />
+                              <span className="text-sm font-medium text-gray-900">
+                                {employee.leaveType}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(employee.startDate).toLocaleDateString()} - {new Date(employee.endDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">
+                      <CalendarDays className="mx-auto h-12 w-12 text-gray-400 mb-2" />
+                      <p className="text-sm">No team members on leave this week</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
-            {leaveBalancesLoading ? (
-              <div className="text-center text-gray-500 py-8">Loading leave balances...</div>
-            ) : leaveBalances.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {leaveBalances.map((balance) => (
-                  <LeaveBalanceCard
-                    key={balance.leaveTypeId}
-                    leaveTypeName={balance.leaveTypeName}
-                    totalAllowed={balance.totalAllowed}
-                    totalTaken={balance.totalTaken}
-                    totalRemaining={balance.totalRemaining}
-                    color={balance.color}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-gray-500 py-8">No leave types configured</div>
-            )}
-          </div>
+          </>
         ) : (
           // Admin View: Show Recent Employees
           <Card>
@@ -171,16 +284,17 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {employeesLoading ? (
-                <div className="text-center text-gray-500">Loading...</div>
+                <RecentEmployeesSkeleton />
               ) : recentEmployees.length > 0 ? (
                 <div className="space-y-4">
                   {recentEmployees.map((employee) => (
                     <div key={employee.id} className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-blue-600">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={employee.profilePhoto} />
+                        <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
                           {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
-                        </span>
-                      </div>
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900">
                           {employee.firstName} {employee.lastName}
@@ -226,7 +340,7 @@ export default function Dashboard() {
                   </DialogContent>
                 </Dialog>
 
-                {/* <Dialog open={isLeaveApplicationDialogOpen} onOpenChange={setIsLeaveApplicationDialogOpen}>
+                <Dialog open={isLeaveApplicationDialogOpen} onOpenChange={setIsLeaveApplicationDialogOpen}>
                   <DialogTrigger asChild>
                     <button className="flex items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors text-left">
                       <Calendar className="h-5 w-5 text-green-600 mr-3" />
@@ -243,7 +357,7 @@ export default function Dashboard() {
                       onCancel={() => setIsLeaveApplicationDialogOpen(false)}
                     />
                   </DialogContent>
-                </Dialog> */}
+                </Dialog>
 
                 <button 
                   className="flex items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors text-left"

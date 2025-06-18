@@ -67,10 +67,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      // For now, since we don't have password column, use simple password check
-      // Admin password: admin123, Employee password: employee123
-      const isAdminEmail = email === 'admin@company.com';
-      const expectedPassword = isAdminEmail ? 'admin123' : 'employee123';
+      // Check password - use the password field from employee record
+      // If no password is set, use default passwords for demo
+      let expectedPassword = employee.password;
+      if (!expectedPassword) {
+        // Default passwords for demo
+        const isAdminEmail = email === 'admin@company.com';
+        expectedPassword = isAdminEmail ? 'admin123' : 'employee123';
+      }
       
       if (password !== expectedPassword) {
         toast({
@@ -81,13 +85,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      // Set user state - determine admin status based on email for now
+      // Set user state - use is_admin field from employee record
       const userData = {
         id: employee.id,
         email: employee.email,
         firstName: employee.first_name,
         lastName: employee.last_name,
-        isAdmin: isAdminEmail, // Admin if email is admin@company.com
+        isAdmin: employee.is_admin || false,
         profilePhoto: employee.profile_photo,
       };
 

@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { EmployeeLeaveStatusSkeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -124,15 +125,7 @@ export default function EmployeeLeaveStatus() {
     return Array.from(new Set(employees.map(emp => emp.department)));
   }, [employees]);
 
-  if (employeesLoading || applicationsLoading || balancesLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading employee leave status...</div>
-        </div>
-      </div>
-    );
-  }
+  const isAnyLoading = employeesLoading || applicationsLoading || balancesLoading;
 
   return (
     <div className="space-y-6">
@@ -201,7 +194,17 @@ export default function EmployeeLeaveStatus() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredEmployees.map((employee) => {
+            {isAnyLoading ? (
+              <>
+                <EmployeeLeaveStatusSkeleton />
+                <EmployeeLeaveStatusSkeleton />
+                <EmployeeLeaveStatusSkeleton />
+                <EmployeeLeaveStatusSkeleton />
+                <EmployeeLeaveStatusSkeleton />
+                <EmployeeLeaveStatusSkeleton />
+              </>
+            ) : (
+              filteredEmployees.map((employee) => {
               const employeeBalance = getEmployeeBalance(employee.id);
               
               return (
@@ -325,10 +328,11 @@ export default function EmployeeLeaveStatus() {
                   </div>
                 </div>
               );
-            })}
+              })
+            )}
           </div>
 
-          {filteredEmployees.length === 0 && (
+          {!isAnyLoading && filteredEmployees.length === 0 && (
             <div className="text-center py-12">
               <Users className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No employees found</h3>

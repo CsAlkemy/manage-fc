@@ -11,6 +11,7 @@ import { LeaveTypeFormData } from "@/schemas";
 import { Settings, Plus, MoreHorizontal, Edit, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { useLeaveTypes } from "@/hooks/useLeaveTypes";
 import { LeaveTypeForm } from "@/components/forms/LeaveTypeForm";
+import { LeaveTypeCardSkeleton } from "@/components/ui/skeleton";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -150,15 +151,7 @@ export default function LeaveTypes() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading leave types...</div>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6">
@@ -191,7 +184,17 @@ export default function LeaveTypes() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {leaveTypes.map((leaveType) => (
+        {isLoading ? (
+          <>
+            <LeaveTypeCardSkeleton />
+            <LeaveTypeCardSkeleton />
+            <LeaveTypeCardSkeleton />
+            <LeaveTypeCardSkeleton />
+            <LeaveTypeCardSkeleton />
+            <LeaveTypeCardSkeleton />
+          </>
+        ) : (
+          leaveTypes.map((leaveType) => (
           <Card key={leaveType.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -288,10 +291,11 @@ export default function LeaveTypes() {
               </div>
             </CardContent>
           </Card>
-        ))}
+          ))
+        )}
       </div>
 
-      {leaveTypes.length === 0 && (
+      {!isLoading && leaveTypes.length === 0 && (
         <div className="text-center py-12">
           <Settings className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No leave types found</h3>

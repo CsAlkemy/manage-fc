@@ -108,11 +108,18 @@ export function LeaveApplicationForm({ onSubmit, onCancel }: LeaveApplicationFor
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            // If end date is before start date, reset end date
+                            const currentEndDate = form.getValues("endDate");
+                            if (date && currentEndDate && date > currentEndDate) {
+                              form.setValue("endDate", date);
+                            }
+                          }}
                           disabled={(date) => date < new Date()}
                           initialFocus
                         />
@@ -148,12 +155,15 @@ export function LeaveApplicationForm({ onSubmit, onCancel }: LeaveApplicationFor
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < (startDate || new Date())}
+                          onSelect={(date) => field.onChange(date)}
+                          disabled={(date) => {
+                            const startDate = form.getValues("startDate");
+                            return date < (startDate || new Date());
+                          }}
                           initialFocus
                         />
                       </PopoverContent>

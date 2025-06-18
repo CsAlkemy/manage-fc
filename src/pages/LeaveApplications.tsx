@@ -8,11 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, XCircle, Clock, FileText, Calendar, Eye, Filter, X } from "lucide-react";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CheckCircle, XCircle, Clock, FileText, Calendar, Eye, Filter, X, CalendarIcon } from "lucide-react";
 import { useLeaveApplications } from "@/hooks/useLeaveApplications";
 import { useAuth } from "@/contexts/AuthContext";
 import { LeaveApplication } from "@/types";
 import { format, isWithinInterval, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
+import { LeaveApplicationCardSkeleton } from "@/components/ui/skeleton";
 
 export default function LeaveApplications() {
   const { leaveApplications, isLoading, approveApplication, rejectApplication } = useLeaveApplications();
@@ -25,8 +29,8 @@ export default function LeaveApplications() {
     status: "all",
     leaveType: "all",
     employee: "",
-    startDate: "",
-    endDate: ""
+    startDate: undefined as Date | undefined,
+    endDate: undefined as Date | undefined
   });
   const [showFilters, setShowFilters] = useState(false);
 
@@ -141,26 +145,18 @@ export default function LeaveApplications() {
       status: "all",
       leaveType: "all",
       employee: "",
-      startDate: "",
-      endDate: ""
+      startDate: undefined,
+      endDate: undefined
     });
   };
 
   const hasActiveFilters = filters.status !== "all" || 
                           filters.leaveType !== "all" || 
                           filters.employee !== "" || 
-                          filters.startDate !== "" || 
-                          filters.endDate !== "";
+                          filters.startDate !== undefined || 
+                          filters.endDate !== undefined;
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading leave applications...</div>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6">
@@ -265,21 +261,55 @@ export default function LeaveApplications() {
               {/* Start Date Filter */}
               <div>
                 <label className="text-sm font-medium mb-2 block">From Date</label>
-                <Input
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !filters.startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filters.startDate ? format(filters.startDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={filters.startDate}
+                      onSelect={(date) => setFilters(prev => ({ ...prev, startDate: date }))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* End Date Filter */}
               <div>
                 <label className="text-sm font-medium mb-2 block">To Date</label>
-                <Input
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !filters.endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filters.endDate ? format(filters.endDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={filters.endDate}
+                      onSelect={(date) => setFilters(prev => ({ ...prev, endDate: date }))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </CardContent>
@@ -302,7 +332,16 @@ export default function LeaveApplications() {
       )}
 
       <div className="grid gap-6">
-        {filteredApplications.map((application) => (
+        {isLoading ? (
+          <>
+            <LeaveApplicationCardSkeleton />
+            <LeaveApplicationCardSkeleton />
+            <LeaveApplicationCardSkeleton />
+            <LeaveApplicationCardSkeleton />
+            <LeaveApplicationCardSkeleton />
+          </>
+        ) : (
+          filteredApplications.map((application) => (
           <Card key={application.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -496,10 +535,11 @@ export default function LeaveApplications() {
               </div>
             </CardContent>
           </Card>
-        ))}
+          ))
+        )}
       </div>
 
-      {filteredApplications.length === 0 && (
+      {!isLoading && filteredApplications.length === 0 && (
         <div className="text-center py-12">
           <FileText className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">

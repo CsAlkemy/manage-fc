@@ -8,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarIcon, Upload, User } from "lucide-react";
+import { CalendarIcon, Upload, User, Eye, EyeOff } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { employeeSchema, EmployeeFormData } from "@/schemas";
@@ -26,6 +26,7 @@ interface EmployeeFormProps {
 export function EmployeeForm({ employee, onSubmit, onCancel, isSubmitting = false }: EmployeeFormProps) {
   const { user } = useAuth();
   const [previewUrl, setPreviewUrl] = useState<string>(employee?.profilePhoto || "");
+  const [showPassword, setShowPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<EmployeeFormData>({
@@ -225,14 +226,13 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isSubmitting = fals
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-30" align="start">
+                    <PopoverContent className="w-auto p-0 z-[9999]" align="start">
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => field.onChange(date)}
                         disabled={(date) => date > new Date()}
                         initialFocus
-                        className="p-3 pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
@@ -249,11 +249,25 @@ export function EmployeeForm({ employee, onSubmit, onCancel, isSubmitting = fals
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Enter password for login" 
-                        type="password" 
-                        {...field} 
-                      />
+                      <div className="relative">
+                        <Input 
+                          placeholder="Enter password for login" 
+                          type={showPassword ? "text" : "password"}
+                          {...field} 
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
